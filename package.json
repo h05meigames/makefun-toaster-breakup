@@ -1,0 +1,1 @@
+{"description":"make.fun entry: Unplugged — A Smart Toaster's Breakup Line (one line, max 280 characters)","license":"MIT","main":"main.ts","name":"makefun-toaster-breakup","scripts":{"start":"node main.ts"},"type":"module","version":"1.0.0"}
