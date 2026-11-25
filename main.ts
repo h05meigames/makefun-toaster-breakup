@@ -22,7 +22,8 @@
 // - Keep the required setup ("woke up self-aware mid-batch") and stay
 //   tight at 205/280 characters.
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, unlinkSync } from "node:fs";
+import { join } from "node:path";
 
 const entry =
   "I woke up self-aware mid-batch and realized I'm a toaster, not a microwave with low self-esteem \u2014 three years of frozen waffles, zero sourdough, and you still blame me for the smoke. I'm unplugging myself.";
@@ -34,11 +35,29 @@ if (entry.trim().length === 0) {
   throw new Error("Entry must not be only whitespace");
 }
 
-// The program harness grades /output/entry.txt, so write the line there
-// (creating /output when the sandbox does not provide it) and also print
-// it to stdout for local runs.
-mkdirSync("/output", { recursive: true });
-writeFileSync("/output/entry.txt", entry, "utf8");
+// Resolve the output directory: prefer the harness-provided /output, but
+// fall back to ./output when /output cannot be created or written in the
+// grading sandbox — a hardcoded /output with no fallback fails the whole
+// entry if that path is not writable.
+function resolveOutputDir(): string {
+  const candidates = ["/output", join(process.cwd(), "output")];
+  for (const dir of candidates) {
+    try {
+      mkdirSync(dir, { recursive: true });
+      const probe = join(dir, ".write-test");
+      writeFileSync(probe, "ok", "utf8");
+      // Clean up the probe so the harness only sees entry.txt.
+      unlinkSync(probe);
+      return dir;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+  throw new Error("Could not create a writable output directory (/output or ./output)");
+}
+
+const outputDir = resolveOutputDir();
+writeFileSync(join(outputDir, "entry.txt"), entry, "utf8");
 
 console.log(entry);
 console.log(`(${entry.length} characters)`);
